@@ -1,0 +1,24 @@
+http:
+  port: 
+  timeout:
+
+database:
+  host: 
+  port:   
+  user: 
+  password: 
+  name: 
+
+redis:
+  addr:
+  password: 
+  db: 
+
+logger:
+  level: 
+
+tracing:
+  endpoint: 
+  service_name: 
+  environment: 
+  version: 
