@@ -42,7 +42,7 @@ func NewMysqlAdRepository(db *sql.DB, cache cache.Cache, metrics *metrics.Reposi
 }
 
 func (r *mysqlAdRepository) GetAllAds(ctx context.Context, limit int, offset int, sortBy string, order string) ([]*domain.Ad, error) {
-	ctx, span := r.tracer.Start(ctx, "GetAllAds")
+	ctx, span := r.tracer.Start(ctx, "Repository GetAllAds")
 	defer span.End()
 
 	startTime := time.Now()
@@ -58,7 +58,10 @@ func (r *mysqlAdRepository) GetAllAds(ctx context.Context, limit int, offset int
 	cacheKey := "ads:default_page"
 
 	if isDefaultPagination {
-		cachedAds, err := r.cache.Get(ctx, cacheKey)
+		cacheSpanCtx, cacheSpan := r.tracer.Start(ctx, "Redis Get")
+		cachedAds, err := r.cache.Get(cacheSpanCtx, cacheKey)
+		cacheSpan.End()
+
 		if err == nil {
 			var ads []*domain.Ad
 			if err := json.Unmarshal([]byte(cachedAds), &ads); err == nil {
@@ -108,7 +111,9 @@ func (r *mysqlAdRepository) GetAllAds(ctx context.Context, limit int, offset int
 	if isDefaultPagination {
 		adsJSON, err := json.Marshal(ads)
 		if err == nil {
-			r.cache.Set(ctx, cacheKey, string(adsJSON), 10*time.Minute)
+			cacheSpanCtx, cacheSpan := r.tracer.Start(ctx, "Redis Set")
+			r.cache.Set(cacheSpanCtx, cacheKey, string(adsJSON), 10*time.Minute)
+			cacheSpan.End()
 		}
 	}
 
@@ -116,22 +121,17 @@ func (r *mysqlAdRepository) GetAllAds(ctx context.Context, limit int, offset int
 }
 
 func (r *mysqlAdRepository) GetAdByID(ctx context.Context, id int64) (*domain.Ad, error) {
-	ctx, span := r.tracer.Start(ctx, "GetAdByID")
+	ctx, span := r.tracer.Start(ctx, "Repository GetAdByID")
 	defer span.End()
 
 	span.SetAttributes(attribute.Int64("ad.id", id))
 
-	startTime := time.Now()
-	status := "success"
-
-	defer func() {
-		duration := time.Since(startTime).Seconds()
-		r.metrics.QueryCount.WithLabelValues("GetAdByID", status).Inc()
-		r.metrics.QueryDuration.WithLabelValues("GetAdByID", status).Observe(duration)
-	}()
-
 	cacheKey := fmt.Sprintf("ad:%d", id)
-	cachedAd, err := r.cache.Get(ctx, cacheKey)
+
+	cacheSpanCtx, cacheSpan := r.tracer.Start(ctx, "Redis Get")
+	cachedAd, err := r.cache.Get(cacheSpanCtx, cacheKey)
+	cacheSpan.End()
+
 	if err == nil {
 		var ad domain.Ad
 		if err := json.Unmarshal([]byte(cachedAd), &ad); err == nil {
@@ -158,21 +158,22 @@ func (r *mysqlAdRepository) GetAdByID(ctx context.Context, id int64) (*domain.Ad
 	)
 
 	if err != nil {
-		status = "error"
 		span.RecordError(err)
 		return nil, err
 	}
 
 	adJSON, err := json.Marshal(ad)
 	if err == nil {
-		r.cache.Set(ctx, cacheKey, string(adJSON), 10*time.Minute)
+		cacheSpanCtx, cacheSpan := r.tracer.Start(ctx, "Redis Set")
+		r.cache.Set(cacheSpanCtx, cacheKey, string(adJSON), 10*time.Minute)
+		cacheSpan.End()
 	}
 
 	return ad, nil
 }
 
 func (r *mysqlAdRepository) CreateAd(ctx context.Context, ad *domain.Ad) (*domain.Ad, error) {
-	ctx, span := r.tracer.Start(ctx, "CreateAd")
+	ctx, span := r.tracer.Start(ctx, "Repository CreateAd")
 	defer span.End()
 
 	span.SetAttributes(
@@ -225,7 +226,7 @@ func (r *mysqlAdRepository) CreateAd(ctx context.Context, ad *domain.Ad) (*domai
 }
 
 func (r *mysqlAdRepository) UpdateAd(ctx context.Context, ad *domain.Ad) (*domain.Ad, error) {
-	ctx, span := r.tracer.Start(ctx, "UpdateAd")
+	ctx, span := r.tracer.Start(ctx, "Repository UpdateAd")
 	defer span.End()
 
 	span.SetAttributes(
@@ -269,7 +270,10 @@ func (r *mysqlAdRepository) UpdateAd(ctx context.Context, ad *domain.Ad) (*domai
 	}
 
 	cacheKey := fmt.Sprintf("ad:%d", ad.ID)
-	r.cache.Delete(ctx, cacheKey)
+
+	cacheSpanCtx, cacheSpan := r.tracer.Start(ctx, "Redis Delete")
+	r.cache.Delete(cacheSpanCtx, cacheKey)
+	cacheSpan.End()
 
 	var updatedAd domain.Ad
 	err = r.db.QueryRowContext(ctx, "SELECT id, title, description, price, active, created_at, updated_at FROM ads WHERE id = ?", ad.ID).Scan(
@@ -289,14 +293,16 @@ func (r *mysqlAdRepository) UpdateAd(ctx context.Context, ad *domain.Ad) (*domai
 
 	updatedAdJSON, err := json.Marshal(&updatedAd)
 	if err == nil {
-		r.cache.Set(ctx, cacheKey, string(updatedAdJSON), 10*time.Minute)
+		cacheSpanCtx, cacheSpan = r.tracer.Start(ctx, "Redis Set")
+		r.cache.Set(cacheSpanCtx, cacheKey, string(updatedAdJSON), 10*time.Minute)
+		cacheSpan.End()
 	}
 
 	return &updatedAd, nil
 }
 
 func (r *mysqlAdRepository) DeleteAd(ctx context.Context, id int64) error {
-	ctx, span := r.tracer.Start(ctx, "DeleteAd")
+	ctx, span := r.tracer.Start(ctx, "Repository DeleteAd")
 	defer span.End()
 
 	span.SetAttributes(attribute.Int64("ad.id", id))
@@ -334,13 +340,16 @@ func (r *mysqlAdRepository) DeleteAd(ctx context.Context, id int64) error {
 	}
 
 	cacheKey := fmt.Sprintf("ad:%d", id)
-	r.cache.Delete(ctx, cacheKey)
+
+	cacheSpanCtx, cacheSpan := r.tracer.Start(ctx, "Redis Delete")
+	r.cache.Delete(cacheSpanCtx, cacheKey)
+	cacheSpan.End()
 
 	return nil
 }
 
 func (r *mysqlAdRepository) CountAds(ctx context.Context) (int, error) {
-	ctx, span := r.tracer.Start(ctx, "CountAds")
+	ctx, span := r.tracer.Start(ctx, "Repository CountAds")
 	defer span.End()
 
 	startTime := time.Now()

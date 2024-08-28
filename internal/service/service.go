@@ -51,7 +51,7 @@ func NewAdService(repository repository.AdRepository, metrics *metrics.ServiceMe
 }
 
 func (s *adService) GetAllAds(ctx context.Context, limit int, offset int, sortBy string, order string) (*PaginationResult, error) {
-	ctx, span := s.tracer.Start(ctx, "GetAllAds")
+	ctx, span := s.tracer.Start(ctx, "Service GetAllAds")
 	defer span.End()
 
 	startTime := time.Now()
@@ -111,7 +111,7 @@ func (s *adService) GetAdByID(ctx context.Context, id int64) (*domain.Ad, error)
 		return nil, err
 	}
 
-	ctx, span := s.tracer.Start(ctx, "GetAdByID")
+	ctx, span := s.tracer.Start(ctx, "Service GetAdByID")
 	defer span.End()
 
 	startTime := time.Now()
@@ -127,10 +127,12 @@ func (s *adService) GetAdByID(ctx context.Context, id int64) (*domain.Ad, error)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			status = "not_found"
+			span.SetAttributes(attribute.String("error", "ad not found"))
 			return nil, ErrAdNotFound
 		}
 		status = "error"
 		span.RecordError(err)
+		span.SetAttributes(attribute.String("error", "failed to retrieve ad"))
 		return nil, err
 	}
 
@@ -139,7 +141,7 @@ func (s *adService) GetAdByID(ctx context.Context, id int64) (*domain.Ad, error)
 }
 
 func (s *adService) CreateAd(ctx context.Context, ad *domain.Ad) (*domain.Ad, error) {
-	ctx, span := s.tracer.Start(ctx, "CreateAd")
+	ctx, span := s.tracer.Start(ctx, "Service CreateAd")
 	defer span.End()
 
 	startTime := time.Now()
@@ -155,6 +157,7 @@ func (s *adService) CreateAd(ctx context.Context, ad *domain.Ad) (*domain.Ad, er
 	if err != nil {
 		status = "error"
 		span.RecordError(err)
+		span.SetAttributes(attribute.String("error", "failed to create ad"))
 		return nil, err
 	}
 
@@ -172,7 +175,7 @@ func (s *adService) UpdateAd(ctx context.Context, ad *domain.Ad) (*domain.Ad, er
 		return nil, err
 	}
 
-	ctx, span := s.tracer.Start(ctx, "UpdateAd")
+	ctx, span := s.tracer.Start(ctx, "Service UpdateAd")
 	defer span.End()
 
 	startTime := time.Now()
@@ -188,10 +191,12 @@ func (s *adService) UpdateAd(ctx context.Context, ad *domain.Ad) (*domain.Ad, er
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			status = "not_found"
+			span.SetAttributes(attribute.String("error", "ad not found"))
 			return nil, ErrAdNotFound
 		}
 		status = "error"
 		span.RecordError(err)
+		span.SetAttributes(attribute.String("error", "failed to update ad"))
 		return nil, err
 	}
 
@@ -209,7 +214,7 @@ func (s *adService) DeleteAd(ctx context.Context, id int64) error {
 		return err
 	}
 
-	ctx, span := s.tracer.Start(ctx, "DeleteAd")
+	ctx, span := s.tracer.Start(ctx, "Service DeleteAd")
 	defer span.End()
 
 	startTime := time.Now()
@@ -225,10 +230,12 @@ func (s *adService) DeleteAd(ctx context.Context, id int64) error {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			status = "not_found"
+			span.SetAttributes(attribute.String("error", "ad not found"))
 			return ErrAdNotFound
 		}
 		status = "error"
 		span.RecordError(err)
+		span.SetAttributes(attribute.String("error", "failed to delete ad"))
 		return err
 	}
 

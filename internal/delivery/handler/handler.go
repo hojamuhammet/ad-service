@@ -38,7 +38,7 @@ func NewAdHandler(service service.AdService, logger *logger.Loggers, metrics *me
 }
 
 func (h *AdHandler) GetAdByID(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.tracer.Start(r.Context(), "GetAdByID")
+	ctx, span := h.tracer.Start(r.Context(), "Handler GetAdByID")
 	defer span.End()
 
 	startTime := time.Now()
@@ -53,6 +53,7 @@ func (h *AdHandler) GetAdByID(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	if idParam == "" {
 		status = "error"
+		span.SetAttributes(attribute.String("error", "missing id parameter"))
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "missing id parameter")
 		return
 	}
@@ -60,6 +61,7 @@ func (h *AdHandler) GetAdByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil || id <= 0 {
 		status = "error"
+		span.SetAttributes(attribute.String("error", "invalid id parameter"))
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "invalid id parameter")
 		return
 	}
@@ -77,6 +79,8 @@ func (h *AdHandler) GetAdByID(w http.ResponseWriter, r *http.Request) {
 		} else {
 			status = "error"
 			h.logger.ErrorLogger.Error("failed to get ad by ID", utils.Err(err))
+			span.SetAttributes(attribute.String("error", "failed to get ad by ID"))
+			span.RecordError(err)
 			utils.RespondWithErrorJSON(w, http.StatusInternalServerError, "internal server error")
 		}
 		span.RecordError(err)
@@ -87,7 +91,7 @@ func (h *AdHandler) GetAdByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdHandler) GetAllAds(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.tracer.Start(r.Context(), "GetAllAds")
+	ctx, span := h.tracer.Start(r.Context(), "Handler GetAllAds")
 	defer span.End()
 
 	startTime := time.Now()
@@ -134,6 +138,7 @@ func (h *AdHandler) GetAllAds(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status = "error"
 		h.logger.ErrorLogger.Error("failed to retrieve ads", utils.Err(err))
+		span.SetAttributes(attribute.String("error", "failed to retrieve ads"))
 		span.RecordError(err)
 		utils.RespondWithErrorJSON(w, http.StatusInternalServerError, "could not retrieve ads")
 		return
@@ -143,7 +148,7 @@ func (h *AdHandler) GetAllAds(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdHandler) CreateAd(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.tracer.Start(r.Context(), "CreateAd")
+	ctx, span := h.tracer.Start(r.Context(), "Handler CreateAd")
 	defer span.End()
 
 	startTime := time.Now()
@@ -159,6 +164,7 @@ func (h *AdHandler) CreateAd(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&adReq); err != nil {
 		status = "error"
 		h.logger.ErrorLogger.Error("Invalid request payload", utils.Err(err))
+		span.SetAttributes(attribute.String("error", "Invalid request payload"))
 		span.RecordError(err)
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -173,6 +179,7 @@ func (h *AdHandler) CreateAd(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status = "error"
 		h.logger.ErrorLogger.Error("Could not create ad", utils.Err(err))
+		span.SetAttributes(attribute.String("error", "Could not create ad"))
 		span.RecordError(err)
 		utils.RespondWithErrorJSON(w, http.StatusInternalServerError, "Could not create ad")
 		return
@@ -182,7 +189,7 @@ func (h *AdHandler) CreateAd(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdHandler) UpdateAd(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.tracer.Start(r.Context(), "UpdateAd")
+	ctx, span := h.tracer.Start(r.Context(), "Handler UpdateAd")
 	defer span.End()
 
 	startTime := time.Now()
@@ -197,6 +204,7 @@ func (h *AdHandler) UpdateAd(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	if idParam == "" {
 		status = "error"
+		span.SetAttributes(attribute.String("error", "missing id parameter"))
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "missing id parameter")
 		return
 	}
@@ -204,6 +212,7 @@ func (h *AdHandler) UpdateAd(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil || id <= 0 {
 		status = "error"
+		span.SetAttributes(attribute.String("error", "invalid id parameter"))
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "invalid id parameter")
 		return
 	}
@@ -212,6 +221,7 @@ func (h *AdHandler) UpdateAd(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&adRequest); err != nil {
 		status = "error"
 		h.logger.ErrorLogger.Error("failed to decode request body", utils.Err(err))
+		span.SetAttributes(attribute.String("error", "failed to decode request body"))
 		span.RecordError(err)
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "invalid request payload")
 		return
@@ -236,6 +246,7 @@ func (h *AdHandler) UpdateAd(w http.ResponseWriter, r *http.Request) {
 		} else {
 			status = "error"
 			h.logger.ErrorLogger.Error("failed to update ad", utils.Err(err))
+			span.SetAttributes(attribute.String("error", "failed to update ad"))
 			span.RecordError(err)
 			utils.RespondWithErrorJSON(w, http.StatusInternalServerError, "internal server error")
 		}
@@ -246,7 +257,7 @@ func (h *AdHandler) UpdateAd(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdHandler) DeleteAd(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.tracer.Start(r.Context(), "DeleteAd")
+	ctx, span := h.tracer.Start(r.Context(), "Handler DeleteAd")
 	defer span.End()
 
 	startTime := time.Now()
@@ -261,6 +272,7 @@ func (h *AdHandler) DeleteAd(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	if idParam == "" {
 		status = "error"
+		span.SetAttributes(attribute.String("error", "missing id parameter"))
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "missing id parameter")
 		return
 	}
@@ -268,6 +280,7 @@ func (h *AdHandler) DeleteAd(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil || id <= 0 {
 		status = "error"
+		span.SetAttributes(attribute.String("error", "invalid id parameter"))
 		utils.RespondWithErrorJSON(w, http.StatusBadRequest, "invalid id parameter")
 		return
 	}
@@ -283,6 +296,7 @@ func (h *AdHandler) DeleteAd(w http.ResponseWriter, r *http.Request) {
 		} else {
 			status = "error"
 			h.logger.ErrorLogger.Error("failed to delete ad", utils.Err(err))
+			span.SetAttributes(attribute.String("error", "failed to delete ad"))
 			span.RecordError(err)
 			utils.RespondWithErrorJSON(w, http.StatusInternalServerError, "internal server error")
 		}
