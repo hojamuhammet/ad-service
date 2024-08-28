@@ -1,4 +1,8 @@
 -- +goose Up
+
+CREATE DATABASE IF NOT EXISTS ads;
+USE ads;
+
 CREATE TABLE ads (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
