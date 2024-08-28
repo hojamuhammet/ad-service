@@ -7,19 +7,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Metrics for handler layer
 type HandlerMetrics struct {
 	RequestCount    *prometheus.CounterVec
 	RequestDuration *prometheus.HistogramVec
 }
 
-// Metrics for service layer
 type ServiceMetrics struct {
 	MethodCount    *prometheus.CounterVec
 	MethodDuration *prometheus.HistogramVec
 }
 
-// Metrics for repository layer
 type RepositoryMetrics struct {
 	QueryCount    *prometheus.CounterVec
 	QueryDuration *prometheus.HistogramVec
