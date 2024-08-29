@@ -20,6 +20,8 @@ processors:
 exporters:
   otlp/jaeger:
     endpoint: "http://jaeger:14250"
+    tls:
+      insecure: true
 
   prometheus:
     namespace: "otel"

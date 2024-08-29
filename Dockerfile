@@ -21,10 +21,7 @@ ENV CGO_ENABLED=0
 # Build the Go app and output binary to /app/main
 RUN go build -o /app/main cmd/main.go
 
-# List files to verify binary exists
-RUN ls -l /app
-
-# Start a new stage from scratch
+# Start a new stage from a minimal base image
 FROM debian:bullseye
 
 # Set the Current Working Directory inside the container
@@ -36,9 +33,6 @@ COPY --from=builder /app/config.yaml .
 
 # Ensure the binary has execution permissions
 RUN chmod +x ./main
-
-# Verify that the binary is present and has correct permissions
-RUN ls -l /root
 
 # Expose port for the HTTP service
 EXPOSE 8080
